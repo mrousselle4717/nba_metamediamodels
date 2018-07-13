@@ -34,7 +34,7 @@ predicted = clf.predict(X_test)
 print(accuracy_score(predicted, y_test))
 
 import pickle
-with open('/Users/vivekkalyanarangan/Desktop/rf.pkl', 'wb') as model_pkl:
+with open('~/nba_metamediamodels/nba_metamediamodels/models/rf.pkl', 'wb') as model_pkl:
     pickle.dump(clf, model_pkl, protocol=2)
     
     

@@ -8,15 +8,15 @@ Created on Fri Mar 16 21:06:35 2018
 
 import pickle
 from flask import Flask, request
-from flasgger import Swagger
+# from flasgger import Swagger
 import numpy as np
 import pandas as pd
 
-with open('/var/www/flask_predict_api/rf.pkl', 'rb') as model_file:
+with open('~/nba_metamediamodels/nba_metamediamodels/models/rf.pkl', 'rb') as model_file:
     model = pickle.load(model_file)
 
 app = Flask(__name__)
-swagger = Swagger(app)
+# swagger = Swagger(app)
 
 @app.route('/predict')
 def predict_iris():
