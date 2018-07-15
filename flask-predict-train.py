@@ -43,7 +43,7 @@ print(accuracy_score(predicted, y_test))
 import pickle
 # with open('Users/mrousselle/nba_metamediamodels/nba_metamediamodels/models/rf.pkl', 'wb') as model_pkl:
 
-pickle.dump(clf, open('nba_metamediamodels/models/rf.pkl', 'wb'), protocol=2)
+pickle.dump(clf, open('nba_metamediamodels/models/rf.pkl', 'wb'), protocol=pickle.HIGHEST_PROTOCOL)
     
     
     

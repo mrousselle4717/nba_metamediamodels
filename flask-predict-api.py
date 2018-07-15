@@ -11,8 +11,9 @@ from flask import Flask, request
 # from flasgger import Swagger
 import numpy as np
 import pandas as pd
+import json
 
-with open('rf.pkl', 'rb') as model_file:
+with open('nba_metamediamodels/models/rf.pkl', 'rb') as model_file:
     model = pickle.load(model_file)
 
 app = Flask(__name__)
@@ -46,7 +47,15 @@ def predict_iris():
     p_width = request.args.get("p_width")
     
     prediction = model.predict(np.array([[float(s_length), float(s_width), float(p_length), float(p_width)]]))
-    return str(prediction)
+    proba = np.amax(model.predict_proba(np.array([[float(s_length), float(s_width), float(p_length), float(p_width)]])))
+    pred_string = 'We Predict category {}, with a probability of {}%.'.format(prediction[0],str(100*round(proba,3)))
+    pred_dict = {
+                    "VALUE":int(prediction[0]),
+                    "PROBABILITY":float(proba)
+                }
+    pred_json = json.dumps(pred_dict)
+
+    return pred_json
 
 @app.route('/predict_file', methods=["POST"])
 def predict_iris_file():
@@ -58,9 +67,21 @@ def predict_iris_file():
         type: file
         required: true
     """
-    input_data = pd.read_csv(request.files.get("input_file"), header=None)
-    prediction = model.predict(input_data)
-    return str(list(prediction))
+    file = pd.read_json(request.files.get("input_file"))
+    return str(file)
+    # input_dict = dict(json.loads(file))
+    # input_df = pd.DataFrame.from_records(input_dict)
+    # prediction = model.predict(input_data)
+    # proba = np.amax(model.predict_proba(input_data))
+    # pred_string = 'We Predict category {}, with a probability of {}%.'.format(prediction[0],str(100*round(proba,3)))
+    # pred_dict = {
+    #                 "VALUE":int(prediction[0]),
+    #                 "PROBABILITY":float(proba)
+    #             }
+    # pred_json = json.dumps(pred_dict)
+
+    # return pred_json
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
     
