@@ -12,13 +12,13 @@ from flask import Flask, request
 import numpy as np
 import pandas as pd
 
-with open('~/nba_metamediamodels/nba_metamediamodels/models/rf.pkl', 'rb') as model_file:
+with open('rf.pkl', 'rb') as model_file:
     model = pickle.load(model_file)
 
 app = Flask(__name__)
 # swagger = Swagger(app)
 
-@app.route('/predict')
+@app.route('/predict',methods=["GET"])
 def predict_iris():
     """Example endpoint returning a prediction of iris
     ---
@@ -45,7 +45,7 @@ def predict_iris():
     p_length = request.args.get("p_length")
     p_width = request.args.get("p_width")
     
-    prediction = model.predict(np.array([[s_length, s_width, p_length, p_width]]))
+    prediction = model.predict(np.array([[float(s_length), float(s_width), float(p_length), float(p_width)]]))
     return str(prediction)
 
 @app.route('/predict_file', methods=["POST"])
