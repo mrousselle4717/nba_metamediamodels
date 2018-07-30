@@ -28,18 +28,6 @@ class MLStripper(HTMLParser):
     def get_data(self):
         return ''.join(self.fed)
 
-def strip_tags(html):
-    s = MLStripper()
-    s.feed(html)
-    return s.get_data()
-
-# def strip_ending_punc(string_):
-#     count = 0
-#     for l in string_[::-1]:
-#         if l in string.punctuation:
-#             count = count + 1
-#     return string_[:count]
-
 
 # TODO: HUGE -- turn this whole thing into a class where the init holds the request, so it only happens once
 # TODO: make unit tests for each of these funcs
@@ -71,41 +59,78 @@ https://www.theringer.com/archives/nba/2016/12
 
 # TODO: figure out how to include this page http://www.espn.com/nba/news/archive/_/month/july/year/2015
 
-# HERE - make a class which wraps all the below functions and uses the config file (and config parser) to turn the config into a dict and add those attributes:
+# TODO: MORE IDEAS FOR HOW TO FINISH THIS CLASS:
+"""
 
-# config = configparser.ConfigParser()
-# config.read('html_config.ini')
-# ringer_config = config._sections['theringer.com']
-# print(ringer_config['link_name'])
+"""
 
-        # 118
-        # down vote
-        # accepted
-        # Sure, something like this:
-        #
-        # class Employee(object):
-        #     def __init__(self, initial_data):
-        #         for key in initial_data:
-        #             setattr(self, key, initial_data[key])
-        # Update
-        #
-        # As Brent Nash suggests, you can make this more flexible by allowing keyword arguments as well:
-        #
-        # class Employee(object):
-        #     def __init__(self, *initial_data, **kwargs):
-        #         for dictionary in initial_data:
-        #             for key in dictionary:
-        #                 setattr(self, key, dictionary[key])
-        #         for key in kwargs:
-        #             setattr(self, key, kwargs[key])
-        # Then you can call it like this:
-        #
-        # e = Employee({"name": "abc", "age": 32})
 
-headers = {
-    'User-Agent': 'My User Agent 1.0',
-    'From': 'youremail@domain.com'  # This is another valid field
-}
+class NBAScraper(object):
+    """
+    A class that scrapes a few pieces of information from NBA websites, using an associated config file.
+
+    TODO: fill this in
+    """
+    def __init__(self,
+                 config_file,
+                 config_section,
+                 article_links_list=[],
+                 headers=None
+                 ):
+        # the following attrs have leading _'s to keep the passed arguments separate from the attrs
+        self._config_file=config_file
+        self._config_section=config_section
+        self._article_links_list=article_links_list  # fill in with something like self.get_all_links
+        self._headers=headers
+        self._config_dict = self.load_config_dict(self._config_file,self._config_section)
+        self._assign_attrs_from_config(self._config_dict)
+
+        # boilerplate headers - required only to complete the transaction
+        # TODO: add if statement - if passed in, then check them and take those, if not use these
+        self._headers = {
+                            'User-Agent': 'My User Agent 1.0',
+                            'From': 'youremail@domain.com'  # This is another valid field
+                        }
+
+    def load_config_dict(self, config_file, config_section):
+        config = configparser.ConfigParser()
+        config.read(config_file)
+        config_dict = config._sections[config_section]
+        return config_dict
+
+    def _assign_attrs_from_config(self,config_dict):
+        for key in config_dict:
+            setattr(self, key, config_dict[key])
+
+    @staticmethod
+    def make_request(url, headers):
+        # uses requests lib to make the request
+        thepage = requests.get(url, headers)
+        return thepage
+
+    @staticmethod
+    def get_content(http_response):
+        # returns the content of the http request
+        contents = http_response.content
+        return contents
+
+    @staticmethod
+    def parse_html(http_response_content):
+        soupdata = BeautifulSoup(http_response_content, "html.parser")
+        return soupdata
+
+    @staticmethod
+    def strip_tags(html):
+        s = MLStripper()
+        s.feed(html)
+        return s.get_data()
+
+    @staticmethod
+    def create_url_from_root(rooturl, archivepath, archive_start_month, archive_start_year):
+
+
+    def get_all_links(self,):
+
 
 def get_title(url):
     thepage = requests.get(url,headers=headers)
@@ -192,10 +217,21 @@ def get_links(url):
 
 
 if __name__ == '__main__':
-    config = configparser.ConfigParser()
-    config.read('html_config.ini')
-    ringer_config = config._sections['theringer.com']
-    print(ringer_config['link_name'])
+    testnba = NBAScraper(config_file='html_config.ini', config_section='theringer.com')
+    attrs = vars(testnba)
+    # {'kids': 0, 'name': 'Dog', 'color': 'Spotted', 'age': 10, 'legs': 2, 'smell': 'Alot'}
+    # now dump this in some way or another
+    print(attrs)
+    # print(', '.join("%s: %s" % item for item in attrs.items()))
+    print(testnba)
+
+
+
+
+    # config = configparser.ConfigParser()
+    # config.read('html_config.ini')
+    # ringer_config = config._sections['theringer.com']
+    # print(ringer_config['link_name'])
     # site = 'theringer'
 
     # better string formatting - "f" strings
