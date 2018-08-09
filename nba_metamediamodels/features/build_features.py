@@ -53,8 +53,6 @@ use the ringer's nba archives
 https://www.theringer.com/archives/nba/2016/12
 
 
-
-
 """
 
 # TODO: figure out how to include this page http://www.espn.com/nba/news/archive/_/month/july/year/2015
