@@ -8,6 +8,7 @@ import numpy as np
 from dateutil import parser
 import re
 import configparser
+import pprint
 # from selenium import webdriver
 import time
 
@@ -67,6 +68,10 @@ class NBAScraper(object):
     """
     A class that scrapes a few pieces of information from NBA websites, using an associated config file.
 
+    This class should be instantiated TWICE with the same config file for its use (not sure this is the best design)
+    - the first instance should aim to fill the self._article_links_list attribute with a list of all the links
+        on a specific site that we want to scrape
+
     TODO: fill this in
     """
     def __init__(self,
@@ -123,12 +128,20 @@ class NBAScraper(object):
         s.feed(html)
         return s.get_data()
 
-    @staticmethod
-    def create_url_from_root(rooturl, archivepath, archive_start_month, archive_start_year):
+    # I DON"T THINK THIS IS GOING TO WORK - NESTED FSTRINGS ARENT POSSIBLE (apparently!)
+    def _construct_test_link_from_config(self):
 
+        test_link = str(self.archivepath)
+        return f"{test_link}"
 
-    def get_all_links(self,):
+    def _construct_links_from_config(self):
+        pass
 
+    # @staticmethod
+    # def create_url_from_root(rooturl, archivepath, archive_start_month, archive_start_year):
+    #
+    #
+    # def get_all_links(self,):
 
 def get_title(url):
     thepage = requests.get(url,headers=headers)
@@ -185,6 +198,10 @@ def get_publish_date(url):
     return formatteddate
 
 # get all the links from this page : http://grantland.com/contributors/zach-lowe/
+
+# NOTE: THERE SHOULD BE 2 WAYS TO GET LINKS
+# -- one is to scrape one INDEX page of a site for all its links, deduping some and throwing junk away
+# -- two is to use details in the config file to CONSTRUCT links
 def get_links(url):
     thepage = requests.get(url,headers=headers)
     soupdata = BeautifulSoup(thepage.content,"html.parser")
@@ -212,16 +229,18 @@ def get_links(url):
     # print(links)
     # return links
 
-
-
 if __name__ == '__main__':
     testnba = NBAScraper(config_file='html_config.ini', config_section='theringer.com')
     attrs = vars(testnba)
     # {'kids': 0, 'name': 'Dog', 'color': 'Spotted', 'age': 10, 'legs': 2, 'smell': 'Alot'}
     # now dump this in some way or another
-    print(attrs)
+    pprint.pprint(attrs) # print it nice
+    # print(attrs)
     # print(', '.join("%s: %s" % item for item in attrs.items()))
     print(testnba)
+
+    teststring = testnba._construct_test_link_from_config()
+    print(teststring)
 
 
 

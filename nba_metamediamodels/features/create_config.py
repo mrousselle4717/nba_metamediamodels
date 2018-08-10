@@ -37,6 +37,7 @@ ringer = config[site]
 ringer['rooturl'] = 'https://www.theringer.com/'
 ringer['link_name'] = "h2"
 ringer['link_class'] = "c-entry-box--compact__title"
+# I DON"T THINK THIS IS GOING TO WORK - NESTED FSTRINGS ARENT POSSIBLE (apparently!)
 ringer['archivepath'] = "archives/nba/{archive_start_year}/{archive_start_month}"
 ringer['archive_start_month'] = "3"
 ringer['archive_start_year'] = "2016"
