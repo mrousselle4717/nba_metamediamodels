@@ -9,6 +9,7 @@ from dateutil import parser
 import re
 import configparser
 import pprint
+from datetime import datetime
 # from selenium import webdriver
 import time
 
@@ -50,18 +51,36 @@ Then for each page in each author's list, we look for c-entry-content to get all
 
 
 NEW PLAN:
-use the ringer's nba archives
+use the ringer's nba archives -- and rather than SCRAPING the links, CONSTRUCT the links via the following formula:
 https://www.theringer.com/archives/nba/2016/12
-
-
 """
 
 # TODO: figure out how to include this page http://www.espn.com/nba/news/archive/_/month/july/year/2015
 
 # TODO: MORE IDEAS FOR HOW TO FINISH THIS CLASS:
 """
-
 """
+
+# I think we're resigned to making 2 classes here, one to get links for any site,
+# and one that uses links to gather data.
+# Further, the first class here will be unfortunately ugly -- it'll HAVE to contain a specialized,
+# function for each website; I can't figure out a way to do this through the config file.
+
+class NBAColumnCollector(object):
+    def __init__(self,
+                 article_links_list=[]
+                 ):
+        pass
+    def get_ringer_links(self):
+        pass
+
+    @staticmethod
+    def get_max_monthyear():
+        today = datetime.today()
+        m_y_tup = (today.month,today.year)
+        return m_y_tup
+
+
 
 
 class NBAScraper(object):
@@ -77,7 +96,7 @@ class NBAScraper(object):
     def __init__(self,
                  config_file,
                  config_section,
-                 article_links_list=[],
+                 article_links_list,
                  headers=None
                  ):
         # the following attrs have leading _'s to keep the passed arguments separate from the attrs
@@ -85,7 +104,7 @@ class NBAScraper(object):
         self._config_section=config_section
         self._article_links_list=article_links_list  # fill in with something like self.get_all_links
         self._headers=headers
-        self._config_dict = self.load_config_dict(self._config_file,self._config_section)
+        self._config_dict = self._load_config_dict(self._config_file,self._config_section)
         self._assign_attrs_from_config(self._config_dict)
 
         # boilerplate headers - required only to complete the transaction
@@ -95,7 +114,7 @@ class NBAScraper(object):
                             'From': 'youremail@domain.com'  # This is another valid field
                         }
 
-    def load_config_dict(self, config_file, config_section):
+    def _load_config_dict(self, config_file, config_section):
         config = configparser.ConfigParser()
         config.read(config_file)
         config_dict = config._sections[config_section]
@@ -230,19 +249,16 @@ def get_links(url):
     # return links
 
 if __name__ == '__main__':
-    testnba = NBAScraper(config_file='html_config.ini', config_section='theringer.com')
-    attrs = vars(testnba)
+    # testnba = NBAScraper(config_file='html_config.ini', config_section='theringer.com')
+    # attrs = vars(testnba)
     # {'kids': 0, 'name': 'Dog', 'color': 'Spotted', 'age': 10, 'legs': 2, 'smell': 'Alot'}
     # now dump this in some way or another
-    pprint.pprint(attrs) # print it nice
-    # print(attrs)
-    # print(', '.join("%s: %s" % item for item in attrs.items()))
-    print(testnba)
+    # pprint.pprint(attrs) # print it nice
+    # print(testnba)
 
-    teststring = testnba._construct_test_link_from_config()
-    print(teststring)
+    cc = NBAColumnCollector()
 
-
+    print(cc.get_max_monthyear())
 
 
     # config = configparser.ConfigParser()
