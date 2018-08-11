@@ -12,7 +12,8 @@ import pprint
 from datetime import datetime
 # from selenium import webdriver
 import time
-
+from dateutil.rrule import rrule, MONTHLY
+from datetime import datetime
 
 # organize this better
 ## TODO: don't keep repeating the same requests.get in every fn
@@ -68,11 +69,39 @@ https://www.theringer.com/archives/nba/2016/12
 
 class NBAColumnCollector(object):
     def __init__(self,
-                 article_links_list=[]
+                 config_file,
+                 config_section,
+                 pages_to_scrape_for_links=[],
+                 article_links_list=[],
+                 headers=None
                  ):
-        pass
+        # the following attrs have leading _'s to keep the passed arguments separate from the attrs
+        self._config_file = config_file
+        self._config_section = config_section
+        self._pages_to_scrape_for_links = pages_to_scrape_for_links  # fill in with something like self.get_all_links
+        self._article_links_list = article_links_list
+        self._headers = headers
+        self._config_dict = self._load_config_dict(self._config_file, self._config_section)
+        self._assign_attrs_from_config(self._config_dict)
+
+        # boilerplate headers - required only to complete the transaction
+        # TODO: add if statement - if passed in, then check them and take those, if not use these
+        self._headers = {
+            'User-Agent': 'My User Agent 1.0',
+            'From': 'youremail@domain.com'  # This is another valid field
+        }
     def get_ringer_links(self):
         pass
+
+    def _load_config_dict(self, config_file, config_section):
+        config = configparser.ConfigParser()
+        config.read(config_file)
+        config_dict = config._sections[config_section]
+        return config_dict
+
+    def _assign_attrs_from_config(self,config_dict):
+        for key in config_dict:
+            setattr(self, key, config_dict[key])
 
     @staticmethod
     def get_max_monthyear():
@@ -80,7 +109,55 @@ class NBAColumnCollector(object):
         m_y_tup = (today.month,today.year)
         return m_y_tup
 
+    @staticmethod
+    def make_month_year_tuple_list(start_month, start_year, end_month, end_year):
+        start = datetime(start_year, start_month, 1)
+        end = datetime(end_year, end_month, 1)
+        return [(d.month, d.year) for d in rrule(MONTHLY, dtstart=start, until=end)]
 
+    def make_ringer_linkfilled_pages(self):
+        end_month, end_year = self.get_max_monthyear()
+        self.archive_end_month = end_month
+        self.archive_end_year = end_year
+        m_y_list = self.make_month_year_tuple_list(int(self.archive_start_month),
+                                                   int(self.archive_start_year),
+                                                   self.archive_end_month,
+                                                   self.archive_end_year)
+        for (m,y) in m_y_list:
+            link = self.rooturl+self.archive_path_prefix+str(y)+'/'+str(m)
+            # print(link)
+            self._pages_to_scrape_for_links.append(link)
+
+    @staticmethod
+    def get_links_from_page(page_url,my_headers,link_name,link_class):
+        thepage = requests.get(url=page_url,headers=my_headers)
+        soupdata = BeautifulSoup(thepage.content,"html.parser")
+        all_links = soupdata.find_all(link_name, class_=link_class)
+        links = []
+        for i in np.arange(0,len(all_links)):
+            clean_link = re.findall('"([^"]*)"',str(all_links[i]))[-1]
+            links.append(clean_link)
+        return links
+
+    def get_links_from_all_linkfilled_pages(self):
+        # add a state-ful check here to make sure that the instance of the class has already run
+        # self.make_ringer_linkfilled_pages(), or maybe that the self._pages_to_scrape_for_links isn't empty
+        # might be good to say "warning, you haven't gotten the linkfilled pages yet, but if you're confident the
+        # links you entered into pages_to_scrape_for_links=[] is good, then we can go ahead and scrape the links
+        for linkfilled_page in self._pages_to_scrape_for_links:
+            page_links = self.get_links_from_page(linkfilled_page,
+                                                  self._headers,
+                                                  self.link_name,
+                                                  self.link_class
+                                                  )
+            # print(page_links)
+            self._article_links_list = self._article_links_list + page_links
+
+        # dedup
+        self._article_links_list = list(set(self._article_links_list))
+
+        # and a list comp to remove all podcasts:
+        self._article_links_list = [x for x in self._article_links_list if "podcast" not in x.lower()]
 
 
 class NBAScraper(object):
@@ -256,9 +333,14 @@ if __name__ == '__main__':
     # pprint.pprint(attrs) # print it nice
     # print(testnba)
 
-    cc = NBAColumnCollector()
+    cc = NBAColumnCollector(config_file='html_config.ini', config_section='theringer.com')
 
-    print(cc.get_max_monthyear())
+    cc.make_ringer_linkfilled_pages()
+    # pprint.pprint(cc._pages_to_scrape_for_links)
+
+    cc.get_links_from_all_linkfilled_pages()
+    print(len(cc._article_links_list))
+    pprint.pprint(cc._article_links_list)
 
 
     # config = configparser.ConfigParser()
