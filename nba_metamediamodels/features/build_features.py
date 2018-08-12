@@ -173,13 +173,13 @@ class NBAScraper(object):
     def __init__(self,
                  config_file,
                  config_section,
-                 article_links_list,
+                 article_link,
                  headers=None
                  ):
         # the following attrs have leading _'s to keep the passed arguments separate from the attrs
         self._config_file=config_file
         self._config_section=config_section
-        self._article_links_list=article_links_list  # fill in with something like self.get_all_links
+        self._article_link=article_link
         self._headers=headers
         self._config_dict = self._load_config_dict(self._config_file,self._config_section)
         self._assign_attrs_from_config(self._config_dict)
@@ -224,74 +224,59 @@ class NBAScraper(object):
         s.feed(html)
         return s.get_data()
 
-    # I DON"T THINK THIS IS GOING TO WORK - NESTED FSTRINGS ARENT POSSIBLE (apparently!)
-    def _construct_test_link_from_config(self):
+    @staticmethod
+    def get_title(parsed_html_content):
+        # remove the html crap
+        cleantitle = strip_tags(str(parsed_html_content.title)).strip()
+        return cleantitle
 
-        test_link = str(self.archivepath)
-        return f"{test_link}"
+    @staticmethod
+    def get_body_text(parsed_html_content,body_name,body_class):
+        # return the body text using pre-defined search params, and take the first item in the returned list (should only ever be 1 item)
+        souptext = str(parsed_html_content.find_all(body_name, class_=body_class)[0])
+        # replace new lines
+        nonewlinetext = souptext.replace('\n', ' ').replace('\r', '')
+        # remove the html code crap
+        cleansouptext = strip_tags(nonewlinetext).strip()
+        return cleansouptext
 
-    def _construct_links_from_config(self):
-        pass
+    @staticmethod
+    def get_author(parsed_html_content,author_name,author_class):
+        # get the author's name using pre-defined search params, and take the first item in the returned list (should only ever be 1 item)
+        authortext = str(parsed_html_content.find_all(author_name, class_=author_class)[0])
+        # remove the html code crap
+        cleanauthortext = strip_tags(authortext).strip()
+        return cleanauthortext
 
-    # @staticmethod
-    # def create_url_from_root(rooturl, archivepath, archive_start_month, archive_start_year):
-    #
-    #
-    # def get_all_links(self,):
+    @staticmethod
+    def get_publish_date(parsed_html_content,pubdate_name,pubdate_class):
+        # get public date using pre-defined search params, and take the first item in the returned list (should only ever be 1 item)
+        pubdate = str(parsed_html_content.find_all(pubdate_name, class_=pubdate_class)[0])
+        # replace new lines
+        nonewlinedate = pubdate.replace('\n', ' ').replace('\r', '')
+        # remove the html code crap
+        cleandate = strip_tags(nonewlinedate).strip()
+        formatteddate = parser.parse(cleandate)
+        return formatteddate
 
-def get_title(url):
-    thepage = requests.get(url,headers=headers)
-    soupdata = BeautifulSoup(thepage.content, "html.parser")
-    cleantitle = strip_tags(str(soupdata.title)).strip()
-    print(cleantitle)
-    return cleantitle
-    # translation = str.maketrans("", "", string.punctuation)
-    # cleantitle_nopunc = cleantitle.translate(translation)
-    # print(cleantitle_nopunc)
+    @staticmethod
+    def make_series_from_components(title, author, website, publish_date, body_text):
+        retrieval_date = datetime.today()
+        features_dict = {'title':title,
+                         'author':author,
+                         'website':website,
+                         'publish_date':publish_date,
+                         'body':body_text,
+                         'retrieval_date':retrieval_date
 
-# for each link, get the text using this:
-def get_body_text(url):
-    thepage = requests.get(url,headers=headers)
-    soupdata = BeautifulSoup(thepage.content,"html.parser")
-    # print(soupdata)
-    # souptext = str(soupdata.find_all("div", class_="blog-body")[0])
-    souptext = str(soupdata.find_all("div", class_="c-entry-content")[0])
-    # souptext = soupdata.find_all("div", class_="c-entry-content")
-    # print("")
-    # print("THIS IS THE BLOG BODY CLASS")
-    # print(type(souptext))
-    # print(souptext)
-    # print("")
-    # print("THIS IS THE TEXT WITHOUT NEW LINES")
-    nonewlinetext = souptext.replace('\n', ' ').replace('\r', '')
-    # print(type(nonewlinetext))
-    # print(nonewlinetext)
-    cleansouptext = strip_tags(nonewlinetext).strip()
-    # print("")
-    # print("THIS IS THE CLEANED TEXT")
-    # print(type(cleansouptext))
-    # print(cleansouptext)
-    return cleansouptext
+                        }
+        features_series = pd.Series(features_dict)
+        return features_series
+    # TODO: add method to create a series (with a dict inside) like this: pandas.Series({'a':1, 'b':5, 'c':2, 'd':3})
+    #       so that the top level function of this class will return an object that a loop can consume
+    #       and fill a dataframe with, using loc: https://stackoverflow.com/questions/17091769/python-pandas-fill-a-dataframe-row-by-row
 
-def get_author(url):
-    thepage = requests.get(url,headers=headers)
-    soupdata = BeautifulSoup(thepage.content, "html.parser")
-    authortext = str(soupdata.find_all("span", class_="c-byline__item")[0])
-    # authortext = str(soupdata.find_all("a", class_="fn",rel="author")[0])
-    cleanauthortext = strip_tags(authortext).strip()
-    print(cleanauthortext)
-    return cleanauthortext
 
-def get_publish_date(url):
-    thepage = requests.get(url,headers=headers)
-    soupdata = BeautifulSoup(thepage.content, "html.parser")
-    pubdate = str(soupdata.find_all("time", class_="c-byline__item")[0])
-    nonewlinedate = pubdate.replace('\n', ' ').replace('\r', '')
-    # print(pubdate)
-    cleandate = strip_tags(nonewlinedate).strip()
-    formatteddate = parser.parse(cleandate)
-    print(formatteddate)
-    return formatteddate
 
 # get all the links from this page : http://grantland.com/contributors/zach-lowe/
 
@@ -333,14 +318,21 @@ if __name__ == '__main__':
     # pprint.pprint(attrs) # print it nice
     # print(testnba)
 
-    cc = NBAColumnCollector(config_file='html_config.ini', config_section='theringer.com')
+    cc = NBAColumnCollector(config_file='html_config.ini',
+                            config_section='theringer.com'
+                            )
 
     cc.make_ringer_linkfilled_pages()
     # pprint.pprint(cc._pages_to_scrape_for_links)
 
     cc.get_links_from_all_linkfilled_pages()
     print(len(cc._article_links_list))
-    pprint.pprint(cc._article_links_list)
+    # pprint.pprint(cc._article_links_list)
+
+    scraper = NBAScraper(config_file='html_config.ini',
+                         config_section='theringer.com',
+                         article_links_list=cc._article_links_list
+                         )
 
 
     # config = configparser.ConfigParser()
