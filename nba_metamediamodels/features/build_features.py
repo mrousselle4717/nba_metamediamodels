@@ -35,6 +35,11 @@ class MLStripper(HTMLParser):
 # TODO: HUGE -- turn this whole thing into a class where the init holds the request, so it only happens once
 # TODO: make unit tests for each of these funcs
 # TODO: write good docstrings
+# TODO: add type hints to all the functions here
+# TODO: make a factory method under NBASCRAPER called make_ringer(cls) which will return an instance of NBASCRAPER prepopulated with the ringer materials (think about the margerhita pizza example)
+# TODO: use the hypothesis library to do testing like this: https://hillelwayne.com/talks/beyond-unit-tests/ &  https://hypothesis.readthedocs.io/en/latest/quickstart.html & https://github.com/deadpixi/contracts
+# TODO: add type-hints to all these functions & run mypy against it
+# TODO: when deploying, use this resource: http://flask.pocoo.org/docs/1.0/deploying/
 
 """
 Plan here: 
@@ -66,6 +71,57 @@ https://www.theringer.com/archives/nba/2016/12
 # and one that uses links to gather data.
 # Further, the first class here will be unfortunately ugly -- it'll HAVE to contain a specialized,
 # function for each website; I can't figure out a way to do this through the config file.
+
+# TODO: add a base class here that both these below classes will inherit from so we don't have to repeat so much code
+
+class NBAScraperBase(object):
+    """
+        A base class with all boilerplate functionality to do web scraping/parsing using params from a config file
+    """
+    def __init__(self,
+                 config_file,
+                 config_section,
+                 headers=None
+                 ):
+        # the following attrs have leading _'s to keep the passed arguments separate from the attrs
+        self._config_file=config_file
+        self._config_section=config_section
+        self._article_link=article_link
+        self._config_dict = self.load_config_dict(self._config_file,self._config_section)
+        self._assign_attrs_from_config(self._config_dict)
+
+        # boilerplate headers - required only to complete the transaction
+        # TODO: add if statement - if passed in, then check them and take those, if not use these
+        self._headers=headers
+        self._headers = {
+                            'User-Agent': 'My User Agent 1.0',
+                            'From': 'youremail@domain.com'  # This is another valid field
+                        }
+
+    def load_config_dict(self, config_file, config_section):
+        """
+            Loads our custom .ini config file using configparser (in the standard library)
+            We'll use this method to assign the private attribute ._config_dict
+        :param config_file: .ini file, or any file that won't error with configparser.ConfigParser().read(FILE)
+        :param config_section: str, the _sections[] header within the config file containing our required params
+        :return: dict, key-value pairs of all elements in the specified section of the config file
+        """
+        config = configparser.ConfigParser()
+        config.read(config_file)
+        config_dict = config._sections[config_section]
+        return config_dict
+
+    def _assign_attrs_from_config(self,config_dict):
+        """
+            Private method to take any dictionary and perform 2 operations:
+                1) turn the keys of that dict into named attributes of the instance
+                2) set the values of that dict to their associated attributes (formerly, associated keys)
+        :param config_dict: dict, usually one from a config file
+        :return: nothing is returned; instance attributes are set
+        """
+        for key in config_dict:
+            setattr(self, key, config_dict[key])
+
 
 class NBAColumnCollector(object):
     def __init__(self,
@@ -181,7 +237,7 @@ class NBAScraper(object):
         self._config_section=config_section
         self._article_link=article_link
         self._headers=headers
-        self._config_dict = self._load_config_dict(self._config_file,self._config_section)
+        self._config_dict = self.load_config_dict(self._config_file,self._config_section)
         self._assign_attrs_from_config(self._config_dict)
 
         # boilerplate headers - required only to complete the transaction
@@ -191,41 +247,83 @@ class NBAScraper(object):
                             'From': 'youremail@domain.com'  # This is another valid field
                         }
 
-    def _load_config_dict(self, config_file, config_section):
+    @staticmethod
+    def load_config_dict(config_file, config_section):
+        """
+            Loads our custom .ini config file using configparser (in the standard library)
+            We'll use this method to assign the private attribute ._config_dict
+        :param config_file: .ini file, or any file that won't error with configparser.ConfigParser().read(FILE)
+        :param config_section: str, the _sections[] header within the config file containing our required params
+        :return: dict, key-value pairs of all elements in the specified section of the config file
+        """
         config = configparser.ConfigParser()
         config.read(config_file)
         config_dict = config._sections[config_section]
         return config_dict
 
     def _assign_attrs_from_config(self,config_dict):
+        """
+            Private method to take any dictionary and perform 2 operations:
+                1) turn the keys of that dict into named attributes of the instance
+                2) set the values of that dict to their associated attributes (formerly, associated keys)
+        :param config_dict: dict, usually one from a config file
+        :return: nothing is returned; instance attributes are set
+        """
         for key in config_dict:
             setattr(self, key, config_dict[key])
 
     @staticmethod
     def make_request(url, headers):
-        # uses requests lib to make the request
+        """
+            Uses the requests library and invokes requests.get() with the passed arguments to access HTTP endpoint
+        :param url: str, an http address to which you'd like to direct a GET request
+        :param headers: dict, filled with minimum criteria for making a request (need 'User-Agent' and 'From' keys)
+        :return: object, the GET response using format from the requests lib
+        """
         thepage = requests.get(url, headers)
         return thepage
 
     @staticmethod
     def get_content(http_response):
-        # returns the content of the http request
+        """
+            Returns content from an HTTP GET response; this content can then be parsed using any HTML parser.
+            Here, we'll use BS4 to do the parsing.
+        :param http_response: object, a GET response using format from the requests lib
+        :return: the .content (syntax from the requests lib) from an HTTP response
+        """
         contents = http_response.content
         return contents
 
     @staticmethod
     def parse_html(http_response_content):
+        """
+            Uses BS4 and the "html.parser" to turn the GET response's content into text.
+            We'll parse actual information out of this text later.
+        :param http_response_content: the .content (syntax from the requests lib) from an HTTP response
+        :return: obj, a BS4 html parsed object that we can either convert to text or search through methodically
+        """
         soupdata = BeautifulSoup(http_response_content, "html.parser")
         return soupdata
 
     @staticmethod
     def strip_tags(html):
+        """
+            A helper method to clean up post-parsed web text; often, this text will still have some html tags in it,
+            And this is a simple way to remove them all.
+        :param html: str, any text string with standardized html code in it that we'd like to filter out
+        :return: str, a text string WITHOUT any html tags
+        """
         s = MLStripper()
         s.feed(html)
         return s.get_data()
 
     @staticmethod
     def get_title(parsed_html_content):
+        """
+            Takes a text string, assumed to be
+        :param parsed_html_content: obj, the returned data from BS4's html parser
+        :return: str, the title attribute from BS4's post-html-parser, w/o html tags, and converted to string
+        """
         # remove the html crap
         cleantitle = strip_tags(str(parsed_html_content.title)).strip()
         return cleantitle
@@ -242,7 +340,14 @@ class NBAScraper(object):
 
     @staticmethod
     def get_author(parsed_html_content,author_name,author_class):
-        # get the author's name using pre-defined search params, and take the first item in the returned list (should only ever be 1 item)
+        """
+            Get the author's name using pre-defined search params,
+            and take the first item in the returned list (should only ever be 1 item)
+        :param parsed_html_content: object, Html parsed BS4 object
+        :param author_name: str, the name of the html key (found in our config file) for author name
+        :param author_class: str, the input for the `class_` arg in BS4's .find_all() for author name (in config file)
+        :return: str, author name
+        """
         authortext = str(parsed_html_content.find_all(author_name, class_=author_class)[0])
         # remove the html code crap
         cleanauthortext = strip_tags(authortext).strip()
@@ -250,7 +355,14 @@ class NBAScraper(object):
 
     @staticmethod
     def get_publish_date(parsed_html_content,pubdate_name,pubdate_class):
-        # get public date using pre-defined search params, and take the first item in the returned list (should only ever be 1 item)
+        """
+            Get publish date using pre-defined search params,
+            and take the first item in the returned list (should only ever be 1 item)
+        :param parsed_html_content: object, Html parsed BS4 object
+        :param pubdate_name: str, the name of the html key (found in our config file) for publish date
+        :param pubdate_class: str, the input for the `class_` arg in BS4's .find_all() for publish date (in config file)
+        :return: dt, publish date
+        """
         pubdate = str(parsed_html_content.find_all(pubdate_name, class_=pubdate_class)[0])
         # replace new lines
         nonewlinedate = pubdate.replace('\n', ' ').replace('\r', '')

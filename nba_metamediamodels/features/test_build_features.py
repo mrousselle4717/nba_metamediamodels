@@ -1,0 +1,1 @@
+# TODO: use the hypothesis library to do testing like this: https://hillelwayne.com/talks/beyond-unit-tests/ &  https://hypothesis.readthedocs.io/en/latest/quickstart.html & https://github.com/deadpixi/contracts
